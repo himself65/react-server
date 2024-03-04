@@ -1,0 +1,17 @@
+{
+  "name": "swc-plugin-react-server",
+  "version": "0.1.0",
+  "author": "",
+  "license": "ISC",
+  "keywords": [
+    "swc-plugin"
+  ],
+  "main": "target/wasm32-wasi/release/react_server.wasm",
+  "scripts": {
+    "prepublishOnly": "cargo build-wasi --release"
+  },
+  "files": [
+    "target/wasm32-wasi/release/react_server.wasm"
+  ],
+  "preferUnplugged": true
+}
