@@ -9,7 +9,7 @@ use swc_core::plugin::{
 	plugin_transform, proxies::TransformPluginProgramMetadata,
 };
 
-enum Detective {
+enum Directive {
 	Server,
 	Client,
 }
@@ -20,10 +20,10 @@ pub struct ReactServer;
 impl Fold for ReactServer {
 	fn fold_module(&mut self, mut module: Module) -> Module {
 		let mut new_items: Vec<ModuleItem> = vec![];
-		let mut detective: Option<Detective> = None;
+		let mut directive: Option<Directive> = None;
 		// find "use server" or "use client" string literal
 		for item in module.body {
-			if detective.is_some() {
+			if directive.is_some() {
 				new_items.push(item);
 				continue;
 			}
@@ -38,9 +38,9 @@ impl Fold for ReactServer {
 								})
 						) => {
 							if value == "use server" {
-								detective = Some(Detective::Server);
+								directive = Some(Directive::Server);
 							} else if value == "use client" {
-								detective = Some(Detective::Client);
+								directive = Some(Directive::Client);
 							} else {
 								new_items.push(ModuleItem::Stmt(Stmt::Expr(expr)));
 							}
@@ -55,8 +55,8 @@ impl Fold for ReactServer {
 			}
 		}
 		// push "use server" to the top of the file
-		match detective {
-			Some(Detective::Server) => {
+		match directive {
+			Some(Directive::Server) => {
 				new_items.insert(
 					0,
 					ModuleItem::Stmt(
@@ -79,7 +79,7 @@ impl Fold for ReactServer {
 					),
 				);
 			}
-			Some(Detective::Client) => {
+			Some(Directive::Client) => {
 				new_items.insert(
 					0,
 					ModuleItem::Stmt(
@@ -117,7 +117,7 @@ pub fn process_transform(program: Program, _metadata: TransformPluginProgramMeta
 test_inline!(
     Default::default(),
     |_| ReactServer,
-    non_detective,
+    non_directive,
     r#"console.log("transform");"#,
     r#"console.log("transform");"#
 );
@@ -125,7 +125,7 @@ test_inline!(
 test_inline!(
     Default::default(),
     |_| ReactServer,
-    server_detective,
+    server_directive,
     r#""use server";
 console.log("transform");"#,
     r#""use server";
@@ -135,7 +135,7 @@ console.log("transform");"#
 test_inline!(
 		Default::default(),
 		|_| ReactServer,
-		client_detective,
+		client_directive,
 		r#""use client";
 console.log("transform");"#,
 		r#""use client";
@@ -145,7 +145,7 @@ console.log("transform");"#
 test_inline!(
 	Default::default(),
 	|_| ReactServer,
-	detective_after_import,
+	directive_after_import,
 	r#"
 import { foo } from "bar";
 "use server";
