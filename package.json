@@ -13,5 +13,8 @@
   "files": [
     "target/wasm32-wasi/release/react_server.wasm"
   ],
-  "preferUnplugged": true
+  "preferUnplugged": true,
+  "devDependencies": {
+    "@swc/core": "^1.6.1"
+  }
 }
