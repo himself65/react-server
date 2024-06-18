@@ -1,6 +1,6 @@
 {
   "name": "swc-plugin-react-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "himself65 <himself65@outlook.com>",
   "license": "MIT",
   "type": "module",
