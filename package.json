@@ -1,16 +1,23 @@
 {
   "name": "swc-plugin-react-server",
   "version": "0.2.1",
-  "author": "",
-  "license": "ISC",
-  "keywords": [
-    "swc-plugin"
-  ],
+  "author": "himself65 <himself65@outlook.com>",
+  "license": "MIT",
+  "type": "module",
   "main": "target/wasm32-wasi/release/react_server.wasm",
+  "exports": {
+    ".": "./target/wasm32-wasi/release/react_server.wasm"
+  },
+  "keywords": [
+    "swc-plugin",
+    "react",
+    "react-server"
+  ],
   "scripts": {
     "prepublishOnly": "cargo build-wasi --release"
   },
   "files": [
+    "lib",
     "target/wasm32-wasi/release/react_server.wasm"
   ],
   "preferUnplugged": true,

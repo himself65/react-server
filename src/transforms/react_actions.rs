@@ -1040,7 +1040,7 @@ impl<C: Comments> VisitMut for ServerActions<C> {
 					})],
 					src: Box::new(Str {
 						span: DUMMY_SP,
-						value: "private-next-rsc-action-validate".into(),
+						value: "swc-plugin-react-server/rsc".into(),
 						raw: None,
 					}),
 					type_only: false,
@@ -1116,7 +1116,7 @@ impl<C: Comments> VisitMut for ServerActions<C> {
 					})],
 					src: Box::new(Str {
 						span: DUMMY_SP,
-						value: "swc-plugin-react-server/rsc-server-reference".into(),
+						value: "swc-plugin-react-server/rsc".into(),
 						raw: None,
 					}),
 					type_only: false,
@@ -1145,7 +1145,7 @@ impl<C: Comments> VisitMut for ServerActions<C> {
 					],
 					src: Box::new(Str {
 						span: DUMMY_SP,
-						value: "swc-plugin-react-server/rsc-action-encryption".into(),
+						value: "swc-plugin-react-server/rsc".into(),
 						raw: None,
 					}),
 					type_only: false,
