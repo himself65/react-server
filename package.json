@@ -40,6 +40,9 @@
     ]
   },
   "ava": {
+    "files": [
+      "__test__"
+    ],
     "require": [
       "@swc-node/register"
     ],
