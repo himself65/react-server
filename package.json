@@ -23,14 +23,12 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.2",
-    "ava": "^6.0.1",
-    "eslint": "^9.6.0",
-    "prettier": "^3.3.2"
+    "@napi-rs/cli": "^2.18.3",
+    "ava": "^6.1.3"
   },
   "lint-staged": {
     "*.@(js|ts|tsx)": [
-      "eslint -c .eslintrc.yml --fix"
+      "eslint --fix"
     ],
     "*.@(js|ts|tsx|yml|yaml|md|json)": [
       "prettier --write"
@@ -41,7 +39,7 @@
   },
   "ava": {
     "files": [
-      "__test__"
+      "./__test__/**.spec.mjs"
     ],
     "require": [
       "@swc-node/register"
@@ -70,5 +68,6 @@
     "test": "ava",
     "universal": "napi universal",
     "version": "napi version"
-  }
+  },
+  "packageManager": "yarn@4.3.1"
 }
