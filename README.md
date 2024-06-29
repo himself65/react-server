@@ -1,0 +1,5 @@
+# React Server
+
+## LICENSE
+
+MIT
