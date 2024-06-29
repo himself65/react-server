@@ -50,9 +50,6 @@
     ]
   },
   "ava": {
-    "files": [
-      "./__test__/**.spec.mjs"
-    ],
     "require": [
       "@swc-node/register"
     ],
@@ -77,7 +74,7 @@
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm",
-    "test": "ava",
+    "test": "ava ./tests",
     "universal": "napi universal",
     "version": "napi version"
   },
