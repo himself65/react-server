@@ -1,3 +1,3 @@
-# `react-server-linux-arm-gnueabihf`
+# `rsc-rs-linux-arm-gnueabihf`
 
-This is the **armv7-unknown-linux-gnueabihf** binary for `react-server`
+This is the **armv7-unknown-linux-gnueabihf** binary for `rsc-rs`

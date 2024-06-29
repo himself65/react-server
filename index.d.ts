@@ -11,7 +11,7 @@ export interface ValidateResult {
 }
 export const enum RSCError {
   CannotUseBothClientAndServer = 0,
-  ServerActionMustBeAsync = 1
+  ServerActionMustBeAsync = 1,
 }
 export interface ModuleImports {
   name: string

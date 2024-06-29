@@ -1,3 +1,3 @@
-# `react-server-linux-arm64-gnu`
+# `rsc-rs-linux-arm64-gnu`
 
-This is the **aarch64-unknown-linux-gnu** binary for `react-server`
+This is the **aarch64-unknown-linux-gnu** binary for `rsc-rs`

@@ -1,3 +1,3 @@
-# `react-server-freebsd-x64`
+# `rsc-rs-freebsd-x64`
 
-This is the **x86_64-unknown-freebsd** binary for `react-server`
+This is the **x86_64-unknown-freebsd** binary for `rsc-rs`

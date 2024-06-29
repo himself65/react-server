@@ -1,5 +1,5 @@
 {
-  "name": "react-server-android-arm-eabi",
+  "name": "rsc-rs-android-arm-eabi",
   "version": "1.0.0",
   "os": [
     "android"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "react-server.android-arm-eabi.node",
+  "main": "rsc-rs.android-arm-eabi.node",
   "files": [
-    "react-server.android-arm-eabi.node"
+    "rsc-rs.android-arm-eabi.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
@@ -28,5 +28,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:napi-rs/react-server.git"
+  "repository": "git@github.com:himself65/react-server.git"
 }

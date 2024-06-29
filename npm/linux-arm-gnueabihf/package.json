@@ -1,5 +1,5 @@
 {
-  "name": "react-server-linux-arm-gnueabihf",
+  "name": "rsc-rs-linux-arm-gnueabihf",
   "version": "1.0.0",
   "os": [
     "linux"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "react-server.linux-arm-gnueabihf.node",
+  "main": "rsc-rs.linux-arm-gnueabihf.node",
   "files": [
-    "react-server.linux-arm-gnueabihf.node"
+    "rsc-rs.linux-arm-gnueabihf.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
@@ -28,5 +28,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:napi-rs/react-server.git"
+  "repository": "git@github.com:himself65/react-server.git"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "react-server-freebsd-x64",
+  "name": "rsc-rs-freebsd-x64",
   "version": "1.0.0",
   "os": [
     "freebsd"
@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "react-server.freebsd-x64.node",
+  "main": "rsc-rs.freebsd-x64.node",
   "files": [
-    "react-server.freebsd-x64.node"
+    "rsc-rs.freebsd-x64.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
@@ -28,5 +28,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:napi-rs/react-server.git"
+  "repository": "git@github.com:himself65/react-server.git"
 }

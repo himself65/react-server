@@ -1,5 +1,5 @@
 {
-  "name": "react-server-linux-arm64-gnu",
+  "name": "rsc-rs-linux-arm64-gnu",
   "version": "1.0.0",
   "os": [
     "linux"
@@ -10,9 +10,9 @@
   "libc": [
     "glibc"
   ],
-  "main": "react-server.linux-arm64-gnu.node",
+  "main": "rsc-rs.linux-arm64-gnu.node",
   "files": [
-    "react-server.linux-arm64-gnu.node"
+    "rsc-rs.linux-arm64-gnu.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
@@ -31,5 +31,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:napi-rs/react-server.git"
+  "repository": "git@github.com:himself65/react-server.git"
 }

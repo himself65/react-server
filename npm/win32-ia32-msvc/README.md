@@ -1,3 +1,3 @@
-# `react-server-win32-ia32-msvc`
+# `rsc-rs-win32-ia32-msvc`
 
-This is the **i686-pc-windows-msvc** binary for `react-server`
+This is the **i686-pc-windows-msvc** binary for `rsc-rs`

@@ -1,3 +1,3 @@
-# `react-server-darwin-x64`
+# `rsc-rs-darwin-x64`
 
-This is the **x86_64-apple-darwin** binary for `react-server`
+This is the **x86_64-apple-darwin** binary for `rsc-rs`

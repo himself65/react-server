@@ -1,5 +1,5 @@
 {
-  "name": "react-server-darwin-arm64",
+  "name": "rsc-rs-darwin-arm64",
   "version": "1.0.0",
   "os": [
     "darwin"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm64"
   ],
-  "main": "react-server.darwin-arm64.node",
+  "main": "rsc-rs.darwin-arm64.node",
   "files": [
-    "react-server.darwin-arm64.node"
+    "rsc-rs.darwin-arm64.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
@@ -28,5 +28,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:napi-rs/react-server.git"
+  "repository": "git@github.com:himself65/react-server.git"
 }
