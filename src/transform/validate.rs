@@ -2,7 +2,7 @@ use std::path::Path;
 use napi::{Error, Status};
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{Function, ImportDeclaration, Program};
-use oxc_ast::{Trivias, Visit};
+use oxc_ast::{Visit};
 use oxc_ast::visit::walk;
 use oxc_parser::Parser;
 use oxc_span::SourceType;
