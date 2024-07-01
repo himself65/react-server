@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::path::Path;
 use napi::{Error, Status};
 use oxc_allocator::{Allocator, Box, Vec};
-use oxc_ast::ast::{Argument, ArrowFunctionExpression, BindingIdentifier, BindingPattern, BindingPatternKind, CallExpression, Declaration, ExportNamedDeclaration, Expression, Function, IdentifierReference, ImportOrExportKind, ObjectPropertyKind, Statement, StringLiteral, VariableDeclaration, VariableDeclarationKind, VariableDeclarator};
+use oxc_ast::ast;
 use oxc_ast::visit::{walk_mut};
 use oxc_ast::{AstBuilder, VisitMut};
 use oxc_semantic::{Semantic, SemanticBuilder};
@@ -13,6 +13,7 @@ use sha1::{Digest, Sha1};
 use hex::encode;
 use oxc_syntax::scope::{ScopeFlags};
 use tokio::fs;
+use crate::validate::{validate_string, ValidateResult};
 
 #[napi]
 pub async fn react_server_action(
@@ -37,6 +38,7 @@ fn react_server_action_impl(
 ) -> String {
 	let path = Path::new(&file_path);
 	let source_type = SourceType::from_path(path).unwrap();
+	let valid_ret = validate_string(&source_text, source_type).unwrap();
 
 	let allocator = Allocator::default();
 	let ret = Parser::new(&allocator, &source_text, source_type).parse();
@@ -54,6 +56,7 @@ fn react_server_action_impl(
 		is_server_layer,
 		rsc_count: 0,
 		allocator: &allocator,
+		validate_result: valid_ret,
 		allow_emit_export: true,
 		semantic: sem_ret.semantic,
 		ast,
@@ -86,12 +89,14 @@ struct ReactServerAction<'ast> {
 
 	is_server_layer: bool,
 
+	validate_result: ValidateResult,
+
 	allow_emit_export: bool,
 
 	rsc_count: u32,
 	names: std::vec::Vec<String>,
 
-	new_stat: std::vec::Vec<Statement<'ast>>,
+	new_stat: std::vec::Vec<ast::Statement<'ast>>,
 
 	ast: AstBuilder<'ast>,
 	semantic: Semantic<'ast>,
@@ -131,19 +136,20 @@ impl<'ast> ReactServerAction<'ast> {
 }
 
 impl<'ast> ReactServerAction<'ast> {
-	fn generate_register_server_reference_call(
+	fn generate_register_call(
 		&self,
-		arguments: Vec<'ast, Argument<'ast>>,
-	) -> Expression<'ast> {
-		Expression::CallExpression(
+		func_name: &'ast str,
+		arguments: Vec<'ast, ast::Argument<'ast>>,
+	) -> ast::Expression<'ast> {
+		ast::Expression::CallExpression(
 			Box::new_in(
-				CallExpression {
+				ast::CallExpression {
 					span: Default::default(),
-					callee: Expression::Identifier(
+					callee: ast::Expression::Identifier(
 						Box::new_in(
-							IdentifierReference {
+							ast::IdentifierReference {
 								span: Default::default(),
-								name: Atom::from("registerServerReference"),
+								name: Atom::from(func_name),
 								reference_id: Cell::new(None),
 								reference_flag: Default::default(),
 							},
@@ -175,12 +181,12 @@ impl<'ast> ReactServerAction<'ast> {
 		&mut self,
 		fn_name: &'ast str,
 		id: &'ast str,
-	) -> Declaration<'ast> {
+	) -> ast::Declaration<'ast> {
 		let mut arguments = Vec::new_in(self.allocator);
 		arguments.push(
-			Argument::StringLiteral(
+			ast::Argument::StringLiteral(
 				Box::new_in(
-					StringLiteral {
+					ast::StringLiteral {
 						span: Default::default(),
 						value: Atom::from(id),
 					},
@@ -188,9 +194,9 @@ impl<'ast> ReactServerAction<'ast> {
 				)
 			));
 		arguments.push(
-			Argument::Identifier(
+			ast::Argument::Identifier(
 				Box::new_in(
-					IdentifierReference {
+					ast::IdentifierReference {
 						span: Default::default(),
 						name: Atom::from("callServerRSC"),
 						reference_id: Cell::new(None),
@@ -203,13 +209,13 @@ impl<'ast> ReactServerAction<'ast> {
 		let mut declarations = Vec::new_in(self.allocator);
 
 		declarations.push(
-			VariableDeclarator {
+			ast::VariableDeclarator {
 				span: Default::default(),
-				kind: VariableDeclarationKind::Const,
-				id: BindingPattern {
-					kind: BindingPatternKind::BindingIdentifier(
+				kind: ast::VariableDeclarationKind::Const,
+				id: ast::BindingPattern {
+					kind: ast::BindingPatternKind::BindingIdentifier(
 						Box::new_in(
-							BindingIdentifier {
+							ast::BindingIdentifier {
 								span: Default::default(),
 								name: Atom::from(fn_name),
 								symbol_id: Cell::new(None),
@@ -221,13 +227,13 @@ impl<'ast> ReactServerAction<'ast> {
 					optional: false,
 				},
 				init: Some(
-					Expression::CallExpression(
+					ast::Expression::CallExpression(
 						Box::new_in(
-							CallExpression {
+							ast::CallExpression {
 								span: Default::default(),
-								callee: Expression::Identifier(
+								callee: ast::Expression::Identifier(
 									Box::new_in(
-										IdentifierReference {
+										ast::IdentifierReference {
 											span: Default::default(),
 											name: Atom::from("registerServerReference"),
 											reference_id: Cell::new(None),
@@ -248,11 +254,11 @@ impl<'ast> ReactServerAction<'ast> {
 			}
 		);
 
-		Declaration::VariableDeclaration(
+		ast::Declaration::VariableDeclaration(
 			Box::new_in(
-				VariableDeclaration {
+				ast::VariableDeclaration {
 					span: Default::default(),
-					kind: VariableDeclarationKind::Const,
+					kind: ast::VariableDeclarationKind::Const,
 					declarations,
 					declare: false,
 				},
@@ -261,19 +267,22 @@ impl<'ast> ReactServerAction<'ast> {
 		)
 	}
 
+	/// For server side
 	/// emit `export const $PREFIX$id = registerServerReference(original_func_id, fileId, actionId)`
+	/// For client side
+	/// emit `export const name = registerClientReference(error, fileId, actionId)`
 	fn emit_rsc_export(
 		&mut self,
 		fn_name: &'ast str,
 		file_id: &'ast str,
 		export_id: &'ast str,
 	) {
-		let mut arguments: Vec<Argument> = Vec::new_in(self.allocator);
+		let mut arguments: Vec<ast::Argument> = Vec::new_in(self.allocator);
 		// func_name
 		arguments.push(
-			Argument::Identifier(
+			ast::Argument::Identifier(
 				Box::new_in(
-					IdentifierReference {
+					ast::IdentifierReference {
 						span: Default::default(),
 						name: Atom::from(fn_name),
 						reference_id: Cell::new(None),
@@ -285,9 +294,9 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 		// file_id
 		arguments.push(
-			Argument::StringLiteral(
+			ast::Argument::StringLiteral(
 				Box::new_in(
-					StringLiteral {
+					ast::StringLiteral {
 						span: Default::default(),
 						value: Atom::from(file_id),
 					},
@@ -297,9 +306,9 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 		// export_id
 		arguments.push(
-			Argument::StringLiteral(
+			ast::Argument::StringLiteral(
 				Box::new_in(
-					StringLiteral {
+					ast::StringLiteral {
 						span: Default::default(),
 						value: Atom::from(export_id),
 					},
@@ -309,17 +318,20 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 
 		let mut var = Vec::new_in(self.allocator);
-		let export_id = self.get_export_id(export_id);
+		let export_id: &str = match self.validate_result.is_client_entry {
+			true => fn_name,
+			false => self.get_export_id(export_id)
+		};
 		self.names.push(String::from(export_id));
 
 		var.push(
-			VariableDeclarator {
+			ast::VariableDeclarator {
 				span: Default::default(),
-				kind: VariableDeclarationKind::Const,
-				id: BindingPattern {
-					kind: BindingPatternKind::BindingIdentifier(
+				kind: ast::VariableDeclarationKind::Const,
+				id: ast::BindingPattern {
+					kind: ast::BindingPatternKind::BindingIdentifier(
 						Box::new_in(
-							BindingIdentifier {
+							ast::BindingIdentifier {
 								span: Default::default(),
 								name: Atom::from(export_id),
 								symbol_id: Cell::new(None),
@@ -331,7 +343,13 @@ impl<'ast> ReactServerAction<'ast> {
 					optional: false,
 				},
 				init: Some(
-					self.generate_register_server_reference_call(arguments)
+					self.generate_register_call(
+						match self.validate_result.is_client_entry {
+							true => "registerClientReference",
+							false => "registerServerReference",
+						},
+						arguments,
+					)
 				),
 				definite: false,
 			}
@@ -339,16 +357,16 @@ impl<'ast> ReactServerAction<'ast> {
 
 		// export const ...
 		self.new_stat.push(
-			Statement::ExportNamedDeclaration(
+			ast::Statement::ExportNamedDeclaration(
 				Box::new_in(
-					ExportNamedDeclaration {
+					ast::ExportNamedDeclaration {
 						span: Default::default(),
 						declaration: Some(
-							Declaration::VariableDeclaration(
+							ast::Declaration::VariableDeclaration(
 								Box::new_in(
-									VariableDeclaration {
+									ast::VariableDeclaration {
 										span: Default::default(),
-										kind: VariableDeclarationKind::Const,
+										kind: ast::VariableDeclarationKind::Const,
 										declarations: var,
 										declare: false,
 									}, self.allocator,
@@ -357,7 +375,7 @@ impl<'ast> ReactServerAction<'ast> {
 						),
 						specifiers: Vec::new_in(self.allocator),
 						source: None,
-						export_kind: ImportOrExportKind::Value,
+						export_kind: ast::ImportOrExportKind::Value,
 						with_clause: None,
 					}, self.allocator)
 			)
@@ -369,15 +387,15 @@ impl<'ast> ReactServerAction<'ast> {
 	/// Return the SERVER_ACTION_ID string
 	fn emit_anonymous_rsc_export(
 		&mut self,
-		original_func: &Function<'ast>,
+		original_func: &ast::Function<'ast>,
 	) -> &'ast str {
 		let mut var = Vec::new_in(self.allocator);
 		let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), original_func.span.start);
 		self.rsc_count += 1;
 		let mut arguments = Vec::new_in(self.allocator);
 
-		let func: Box<Function<'ast>> = Box::new_in(
-			Function::new(
+		let func: Box<ast::Function<'ast>> = Box::new_in(
+			ast::Function::new(
 				original_func.r#type,
 				original_func.span,
 				self.ast.copy(&original_func.id),
@@ -394,15 +412,15 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 		// original function
 		arguments.push(
-			Argument::FunctionExpression(
+			ast::Argument::FunctionExpression(
 				func
 			)
 		);
 		// file_id
 		arguments.push(
-			Argument::StringLiteral(
+			ast::Argument::StringLiteral(
 				Box::new_in(
-					StringLiteral {
+					ast::StringLiteral {
 						span: Default::default(),
 						value: Atom::from(file_id),
 					},
@@ -412,9 +430,9 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 		// export_id
 		arguments.push(
-			Argument::StringLiteral(
+			ast::Argument::StringLiteral(
 				Box::new_in(
-					StringLiteral {
+					ast::StringLiteral {
 						span: Default::default(),
 						value: Atom::from(fn_id),
 					},
@@ -426,13 +444,13 @@ impl<'ast> ReactServerAction<'ast> {
 		let export_id = self.get_export_id(fn_id);
 
 		var.push(
-			VariableDeclarator {
+			ast::VariableDeclarator {
 				span: Default::default(),
-				kind: VariableDeclarationKind::Const,
-				id: BindingPattern {
-					kind: BindingPatternKind::BindingIdentifier(
+				kind: ast::VariableDeclarationKind::Const,
+				id: ast::BindingPattern {
+					kind: ast::BindingPatternKind::BindingIdentifier(
 						Box::new_in(
-							BindingIdentifier {
+							ast::BindingIdentifier {
 								span: Default::default(),
 								name: Atom::from(export_id),
 								symbol_id: Cell::new(None),
@@ -444,23 +462,23 @@ impl<'ast> ReactServerAction<'ast> {
 					optional: false,
 				},
 				init: Some(
-					self.generate_register_server_reference_call(arguments)
+					self.generate_register_call("registerServerReference", arguments)
 				),
 				definite: false,
 			}
 		);
 		// export const SERVER_ACTION_ID = registerServerReference(func, fileId, actionId);
 		self.new_stat.push(
-			Statement::ExportNamedDeclaration(
+			ast::Statement::ExportNamedDeclaration(
 				Box::new_in(
-					ExportNamedDeclaration {
+					ast::ExportNamedDeclaration {
 						span: Default::default(),
 						declaration: Some(
-							Declaration::VariableDeclaration(
+							ast::Declaration::VariableDeclaration(
 								Box::new_in(
-									VariableDeclaration {
+									ast::VariableDeclaration {
 										span: Default::default(),
-										kind: VariableDeclarationKind::Const,
+										kind: ast::VariableDeclarationKind::Const,
 										declarations: var,
 										declare: false,
 									}, self.allocator,
@@ -469,7 +487,7 @@ impl<'ast> ReactServerAction<'ast> {
 						),
 						specifiers: Vec::new_in(self.allocator),
 						source: None,
-						export_kind: ImportOrExportKind::Value,
+						export_kind: ast::ImportOrExportKind::Value,
 						with_clause: None,
 					}, self.allocator,
 				)
@@ -480,7 +498,7 @@ impl<'ast> ReactServerAction<'ast> {
 
 	fn is_server_action(
 		&mut self,
-		func: &mut Function<'ast>,
+		func: &mut ast::Function<'ast>,
 	) -> bool {
 		let mut has_use_server = false;
 		for stmt in &func.body {
@@ -503,7 +521,7 @@ impl<'ast> ReactServerAction<'ast> {
 
 	fn try_add_function_as_rsc(
 		&mut self,
-		func: &mut Function<'ast>,
+		func: &mut ast::Function<'ast>,
 		file_id: &'ast str,
 		export_id: &'ast str,
 	) {
@@ -513,8 +531,10 @@ impl<'ast> ReactServerAction<'ast> {
 		};
 		let is_server_action = self.is_server_action(func);
 		if self.is_server_layer {
-			// convert to `registerServerReference(fn, file_id, export_id);`
-			if is_server_action {
+			if self.validate_result.is_client_entry {
+				// do nothing here
+			} else if is_server_action {
+				// convert to `registerServerReference(fn, file_id, export_id);`
 				if !func.r#async {
 					return self.comments.push(Comment {
 						start: func.span.start,
@@ -533,6 +553,11 @@ impl<'ast> ReactServerAction<'ast> {
 						// if this function doesn't have a function name, we should not convert it
 					}
 				}
+			} else {
+				// convert to `registerClientReference(() => {
+				//  throw new Error();
+				// }, file_id, export_id);`
+				// handle it in visit_declaration
 			}
 		} else {
 			// convert to `createServerReference(id, callServerRSC);`
@@ -547,12 +572,29 @@ impl<'ast> ReactServerAction<'ast> {
 /// Case 3: client import server -> createServerReference
 /// Case 4: client import client -> as-is
 impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
-	fn visit_variable_declarator(&mut self, declarator: &mut VariableDeclarator<'ast>) {
+	fn visit_export_named_declaration(&mut self, decl: &mut ast::ExportNamedDeclaration<'ast>) {
+		if self.validate_result.is_client_entry && self.is_server_layer {
+			// convert to `registerClientReference(fn, file_id, export_id);`
+			let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), decl.span.start);
+			self.emit_rsc_export("invalid_rsc_call", file_id, fn_id);
+			*decl = ast::ExportNamedDeclaration {
+				span: Default::default(),
+				declaration: None,
+				specifiers: Vec::new_in(self.allocator),
+				source: None,
+				export_kind: ast::ImportOrExportKind::Value,
+				with_clause: None,
+			}
+		}
+		walk_mut::walk_export_named_declaration_mut(self, decl);
+	}
+
+	fn visit_variable_declarator(&mut self, declarator: &mut ast::VariableDeclarator<'ast>) {
 		if let Some(expr) = declarator.init.as_mut() {
 			match expr {
-				Expression::ArrowFunctionExpression(arrow_func) => {
-					let arrow_func: Box<ArrowFunctionExpression<'ast>> = Box::new_in(
-						ArrowFunctionExpression::new(
+				ast::Expression::ArrowFunctionExpression(arrow_func) => {
+					let arrow_func: Box<ast::ArrowFunctionExpression<'ast>> = Box::new_in(
+						ast::ArrowFunctionExpression::new(
 							arrow_func.span,
 							arrow_func.expression,
 							arrow_func.r#async,
@@ -563,17 +605,17 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 						),
 						self.allocator,
 					);
-					let mut arguments: Vec<Argument<'ast>> = Vec::new_in(self.allocator);
+					let mut arguments: Vec<ast::Argument<'ast>> = Vec::new_in(self.allocator);
 					arguments.push(
-						Argument::ArrowFunctionExpression(
+						ast::Argument::ArrowFunctionExpression(
 							arrow_func
 						)
 					);
-					declarator.init = Some(self.generate_register_server_reference_call(arguments));
+					declarator.init = Some(self.generate_register_call("registerServerReference", arguments));
 					walk_mut::walk_variable_declarator_mut(self, declarator);
 					return;
 				}
-				Expression::FunctionExpression(func) => {
+				ast::Expression::FunctionExpression(func) => {
 					match func.scope_id.get() {
 						Some(scope_id) => {
 							let bindings = self.semantic.scopes().get_bindings(
@@ -590,9 +632,9 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 					}
 
 					let export_id = self.emit_anonymous_rsc_export(func);
-					declarator.init = Some(Expression::Identifier(
+					declarator.init = Some(ast::Expression::Identifier(
 						Box::new_in(
-							IdentifierReference {
+							ast::IdentifierReference {
 								span: Default::default(),
 								name: Atom::from(export_id),
 								reference_id: Cell::new(None),
@@ -602,16 +644,16 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 						)
 					));
 				}
-				Expression::ObjectExpression(expr) => {
+				ast::Expression::ObjectExpression(expr) => {
 					for kind in expr.properties.iter_mut() {
 						match kind {
-							ObjectPropertyKind::ObjectProperty(item) => {
+							ast::ObjectPropertyKind::ObjectProperty(item) => {
 								match &item.value {
-									Expression::FunctionExpression(func) => {
+									ast::Expression::FunctionExpression(func) => {
 										let export_id = self.emit_anonymous_rsc_export(func);
-										item.value = Expression::Identifier(
+										item.value = ast::Expression::Identifier(
 											Box::new_in(
-												IdentifierReference {
+												ast::IdentifierReference {
 													span: Default::default(),
 													name: Atom::from(export_id),
 													reference_id: Cell::new(None),
@@ -621,7 +663,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 											)
 										);
 									}
-									Expression::ArrowFunctionExpression(_) => {}
+									ast::Expression::ArrowFunctionExpression(_) => {}
 									_ => {}
 								}
 							}
@@ -638,7 +680,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 		self.allow_emit_export = true;
 	}
 
-	fn visit_function(&mut self, func: &mut Function<'ast>, flags: Option<ScopeFlags>) {
+	fn visit_function(&mut self, func: &mut ast::Function<'ast>, flags: Option<ScopeFlags>) {
 		// if this function is a top-level function, we should add it to rsc here
 		let is_top_level_function: bool = match func.scope_id.get() {
 			None => false,
@@ -664,9 +706,9 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 		walk_mut::walk_function_mut(self, func, flags);
 	}
 
-	fn visit_declaration(&mut self, decl: &mut Declaration<'ast>) {
+	fn visit_declaration(&mut self, decl: &mut ast::Declaration<'ast>) {
 		match decl {
-			Declaration::FunctionDeclaration(func) => {
+			ast::Declaration::FunctionDeclaration(func) => {
 				let is_server_action = self.is_server_action(func);
 				if !self.is_server_layer & is_server_action {
 					// convert to `createServerReference(id, callServerRSC);`
@@ -677,6 +719,19 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 								id.name.as_str(),
 								self.get_export_id(fn_id),
 							);
+						}
+						None => {}
+					}
+				} else if self.is_server_layer && self.validate_result.is_client_entry {
+					// convert to `registerClientReference(fn, file_id, export_id);`
+					match &func.id {
+						Some(id) => {
+							let (_, fn_id) = self.generate_action_id(self.file_name.as_str(), func.span.start);
+							// self.emit_rsc_export(
+							// 	id.name.as_str(),
+							// 	self.get_export_id(fn_id),
+							// 	fn_id,
+							// );
 						}
 						None => {}
 					}
@@ -754,6 +809,17 @@ export async function a() {
 	return 0;
 }
 export const __waku__server__fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f = registerServerReference(a, 'aa08e78087e8703bec46e0df0ebc4c78800fdbaa', 'fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f');
+"#);
+	}
+
+	#[test]
+	fn test_client_import_general_function() {
+		test_ts_server_input(r#"
+"use client"
+export async function foo() {}"#,
+		                     r#"'use client';
+export {};
+export const invalid_rsc_call = registerClientReference(invalid_rsc_call, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', 'fa35e192121eabf3dabf9f5ea6abdbcbc107ac3b');
 "#);
 	}
 
