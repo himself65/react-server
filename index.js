@@ -60,7 +60,7 @@ function requireNative() {
   if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./rsc-rs.android-arm64.node')
+        return require('./index.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -69,9 +69,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm') {
       try {
-        return require('./rsc-rs.android-arm-eabi.node')
+        return require('./index.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -80,13 +81,14 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Android ${process.arch}`))
     }
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
       try {
-        return require('./rsc-rs.win32-x64-msvc.node')
+        return require('./index.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -95,9 +97,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'ia32') {
       try {
-        return require('./rsc-rs.win32-ia32-msvc.node')
+        return require('./index.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -106,9 +109,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
-        return require('./rsc-rs.win32-arm64-msvc.node')
+        return require('./index.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -117,24 +121,25 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Windows: ${process.arch}`))
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./rsc-rs.darwin-universal.node')
-    } catch (e) {
-      loadErrors.push(e)
-    }
-    try {
-      return require('rsc-rs-darwin-universal')
-    } catch (e) {
-      loadErrors.push(e)
-    }
+        return require('./index.darwin-universal.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-darwin-universal')
+      } catch (e) {
+        loadErrors.push(e)
+      }
 
     if (process.arch === 'x64') {
       try {
-        return require('./rsc-rs.darwin-x64.node')
+        return require('./index.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -143,9 +148,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
-        return require('./rsc-rs.darwin-arm64.node')
+        return require('./index.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -154,13 +160,14 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on macOS: ${process.arch}`))
     }
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./rsc-rs.freebsd-x64.node')
+        return require('./index.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -169,9 +176,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
-        return require('./rsc-rs.freebsd-arm64.node')
+        return require('./index.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -180,6 +188,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on FreeBSD: ${process.arch}`))
     }
@@ -187,102 +196,110 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./rsc-rs.linux-x64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-x64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-x64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-x64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rsc-rs.linux-x64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-x64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-x64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-x64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./rsc-rs.linux-arm64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-arm64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-arm64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-arm64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rsc-rs.linux-arm64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-arm64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-arm64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-arm64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./rsc-rs.linux-arm-musleabihf.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-arm-musleabihf')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-arm-musleabihf.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-arm-musleabihf')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rsc-rs.linux-arm-gnueabihf.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-arm-gnueabihf')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-arm-gnueabihf.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-arm-gnueabihf')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./rsc-rs.linux-riscv64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-riscv64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-riscv64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-riscv64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rsc-rs.linux-riscv64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('rsc-rs-linux-riscv64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./index.linux-riscv64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('rsc-rs-linux-riscv64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./rsc-rs.linux-ppc64-gnu.node')
+        return require('./index.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -291,9 +308,10 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 's390x') {
       try {
-        return require('./rsc-rs.linux-s390x-gnu.node')
+        return require('./index.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -302,6 +320,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Linux: ${process.arch}`))
     }
@@ -314,7 +333,7 @@ nativeBinding = requireNative()
 
 if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   try {
-    nativeBinding = require('./rsc-rs.wasi.cjs')
+    nativeBinding = require('./index.wasi.cjs')
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
       console.error(err)
@@ -344,4 +363,5 @@ if (!nativeBinding) {
 
 module.exports.reactServerAction = nativeBinding.reactServerAction
 module.exports.RSCError = nativeBinding.RSCError
+module.exports.shit = nativeBinding.shit
 module.exports.validate = nativeBinding.validate
