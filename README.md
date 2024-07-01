@@ -116,14 +116,14 @@ export const App = (props) => {
 import { registerServerReference } from 'react-server-dom-webpack/server'
 
 export const App = (props) => {
-  return <div onClick={__prefix__onClick.bind(null, [props])} />
+  return <div onClick={__prefix__action_1.bind(null, [props])} />
 }
 
-export const __prefix__1 = registerServerReference(async (bound) => {
+export const __prefix__action_1 = registerServerReference(async (bound) => {
   'use server'
   const [props] = bound
   console.log(props)
-}, 'file_id', '__prefix__1')
+}, 'file_id', '__prefix__action_1')
 ```
 
 ## LICENSE
