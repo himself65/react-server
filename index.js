@@ -60,7 +60,7 @@ function requireNative() {
   if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./index.android-arm64.node')
+        return require('./rsc-rs.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -72,7 +72,7 @@ function requireNative() {
 
     } else if (process.arch === 'arm') {
       try {
-        return require('./index.android-arm-eabi.node')
+        return require('./rsc-rs.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -88,7 +88,7 @@ function requireNative() {
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
       try {
-        return require('./index.win32-x64-msvc.node')
+        return require('./rsc-rs.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -100,7 +100,7 @@ function requireNative() {
 
     } else if (process.arch === 'ia32') {
       try {
-        return require('./index.win32-ia32-msvc.node')
+        return require('./rsc-rs.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -112,7 +112,7 @@ function requireNative() {
 
     } else if (process.arch === 'arm64') {
       try {
-        return require('./index.win32-arm64-msvc.node')
+        return require('./rsc-rs.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -127,7 +127,7 @@ function requireNative() {
     }
   } else if (process.platform === 'darwin') {
     try {
-        return require('./index.darwin-universal.node')
+        return require('./rsc-rs.darwin-universal.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -139,7 +139,7 @@ function requireNative() {
 
     if (process.arch === 'x64') {
       try {
-        return require('./index.darwin-x64.node')
+        return require('./rsc-rs.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -151,7 +151,7 @@ function requireNative() {
 
     } else if (process.arch === 'arm64') {
       try {
-        return require('./index.darwin-arm64.node')
+        return require('./rsc-rs.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -167,7 +167,7 @@ function requireNative() {
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./index.freebsd-x64.node')
+        return require('./rsc-rs.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -179,7 +179,7 @@ function requireNative() {
 
     } else if (process.arch === 'arm64') {
       try {
-        return require('./index.freebsd-arm64.node')
+        return require('./rsc-rs.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -196,7 +196,7 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-        return require('./index.linux-x64-musl.node')
+        return require('./rsc-rs.linux-x64-musl.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -208,7 +208,7 @@ function requireNative() {
 
       } else {
         try {
-        return require('./index.linux-x64-gnu.node')
+        return require('./rsc-rs.linux-x64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -222,7 +222,7 @@ function requireNative() {
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-        return require('./index.linux-arm64-musl.node')
+        return require('./rsc-rs.linux-arm64-musl.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -234,7 +234,7 @@ function requireNative() {
 
       } else {
         try {
-        return require('./index.linux-arm64-gnu.node')
+        return require('./rsc-rs.linux-arm64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -248,7 +248,7 @@ function requireNative() {
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-        return require('./index.linux-arm-musleabihf.node')
+        return require('./rsc-rs.linux-arm-musleabihf.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -260,7 +260,7 @@ function requireNative() {
 
       } else {
         try {
-        return require('./index.linux-arm-gnueabihf.node')
+        return require('./rsc-rs.linux-arm-gnueabihf.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -274,7 +274,7 @@ function requireNative() {
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-        return require('./index.linux-riscv64-musl.node')
+        return require('./rsc-rs.linux-riscv64-musl.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -286,7 +286,7 @@ function requireNative() {
 
       } else {
         try {
-        return require('./index.linux-riscv64-gnu.node')
+        return require('./rsc-rs.linux-riscv64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -299,7 +299,7 @@ function requireNative() {
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./index.linux-ppc64-gnu.node')
+        return require('./rsc-rs.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -311,7 +311,7 @@ function requireNative() {
 
     } else if (process.arch === 's390x') {
       try {
-        return require('./index.linux-s390x-gnu.node')
+        return require('./rsc-rs.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -333,7 +333,7 @@ nativeBinding = requireNative()
 
 if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   try {
-    nativeBinding = require('./index.wasi.cjs')
+    nativeBinding = require('./rsc-rs.wasi.cjs')
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
       console.error(err)

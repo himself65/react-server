@@ -4,7 +4,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "binayName": "rsc-rs",
+    "name": "rsc-rs",
     "targets": [
       "x86_64-unknown-linux-musl",
       "aarch64-unknown-linux-gnu",
