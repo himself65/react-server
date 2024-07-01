@@ -10,14 +10,16 @@ export interface ModuleImports {
   name: string
 }
 
-export function reactServerAction(filePath: string, actionExportPrefix: string, isServerLayer: boolean): Promise<string>
+function reactServerAction(filePath: string, actionExportPrefix: string, isServerLayer: boolean): Promise<string>
 
 export const enum RSCError {
   CannotUseBothClientAndServer = 0,
   ServerActionMustBeAsync = 1
 }
 
-export function validate(filePath: string): Promise<ValidateResult>
+function shit(): void
+
+function validate(filePath: string): Promise<ValidateResult>
 
 export interface ValidateResult {
   isClientEntry: boolean

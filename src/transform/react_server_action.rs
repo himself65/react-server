@@ -169,6 +169,98 @@ impl<'ast> ReactServerAction<'ast> {
 		).into_bump_str()
 	}
 
+	/// const fn_name = createServerReference(id, callServerRSC)
+	/// callServerRSC is a global variable
+	fn generate_rsc_reference_call(
+		&mut self,
+		fn_name: &'ast str,
+		id: &'ast str,
+	) -> Declaration<'ast> {
+		let mut arguments = Vec::new_in(self.allocator);
+		arguments.push(
+			Argument::StringLiteral(
+				Box::new_in(
+					StringLiteral {
+						span: Default::default(),
+						value: Atom::from(id),
+					},
+					self.allocator,
+				)
+			));
+		arguments.push(
+			Argument::Identifier(
+				Box::new_in(
+					IdentifierReference {
+						span: Default::default(),
+						name: Atom::from("callServerRSC"),
+						reference_id: Cell::new(None),
+						reference_flag: Default::default(),
+					},
+					self.allocator,
+				)
+			),
+		);
+		let mut declarations = Vec::new_in(self.allocator);
+
+		declarations.push(
+			VariableDeclarator {
+				span: Default::default(),
+				kind: VariableDeclarationKind::Const,
+				id: BindingPattern {
+					kind: BindingPatternKind::BindingIdentifier(
+						Box::new_in(
+							BindingIdentifier {
+								span: Default::default(),
+								name: Atom::from(fn_name),
+								symbol_id: Cell::new(None),
+							},
+							self.allocator,
+						)
+					),
+					type_annotation: None,
+					optional: false,
+				},
+				init: Some(
+					Expression::CallExpression(
+						Box::new_in(
+							CallExpression {
+								span: Default::default(),
+								callee: Expression::Identifier(
+									Box::new_in(
+										IdentifierReference {
+											span: Default::default(),
+											name: Atom::from("registerServerReference"),
+											reference_id: Cell::new(None),
+											reference_flag: Default::default(),
+										},
+										self.allocator,
+									)
+								),
+								arguments,
+								optional: false,
+								type_parameters: None,
+							},
+							self.allocator,
+						)
+					)
+				),
+				definite: false,
+			}
+		);
+
+		Declaration::VariableDeclaration(
+			Box::new_in(
+				VariableDeclaration {
+					span: Default::default(),
+					kind: VariableDeclarationKind::Const,
+					declarations,
+					declare: false,
+				},
+				self.allocator,
+			)
+		)
+	}
+
 	/// emit `export const $PREFIX$id = registerServerReference(original_func_id, fileId, actionId)`
 	fn emit_rsc_export(
 		&mut self,
@@ -386,6 +478,29 @@ impl<'ast> ReactServerAction<'ast> {
 		return export_id;
 	}
 
+	fn is_server_action(
+		&mut self,
+		func: &mut Function<'ast>,
+	) -> bool {
+		let mut has_use_server = false;
+		for stmt in &func.body {
+			for d in &stmt.directives {
+				if &d.expression.value == "use server" {
+					has_use_server = true;
+				}
+			}
+		}
+
+
+		if !self.is_server_layer {
+			// client side
+			func.r#async && has_use_server
+		} else {
+			// server side
+			func.r#async && (self.is_server_layer || has_use_server)
+		}
+	}
+
 	fn try_add_function_as_rsc(
 		&mut self,
 		func: &mut Function<'ast>,
@@ -396,15 +511,7 @@ impl<'ast> ReactServerAction<'ast> {
 			Some(id) => Some(id.name.as_str()),
 			None => None,
 		};
-		let mut is_server_action = false;
-		for stmt in &func.body {
-			for d in &stmt.directives {
-				if &d.expression.value == "use server" {
-					is_server_action = true;
-				}
-			}
-		}
-
+		let is_server_action = self.is_server_action(func);
 		if self.is_server_layer {
 			// convert to `registerServerReference(fn, file_id, export_id);`
 			if is_server_action {
@@ -428,11 +535,17 @@ impl<'ast> ReactServerAction<'ast> {
 				}
 			}
 		} else {
-			// convert to `registerClientReference(fn, file_id, export_id);`
+			// convert to `createServerReference(id, callServerRSC);`
+			// could not handle here, because Function cannot be converted to CallExpression at this point
+			// handle it in visit_declaration
 		}
 	}
 }
 
+/// Case 1: server import client -> registerClientReference
+/// Case 2: server import server -> registerServerReference
+/// Case 3: client import server -> createServerReference
+/// Case 4: client import client -> as-is
 impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 	fn visit_variable_declarator(&mut self, declarator: &mut VariableDeclarator<'ast>) {
 		if let Some(expr) = declarator.init.as_mut() {
@@ -526,8 +639,8 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 	}
 
 	fn visit_function(&mut self, func: &mut Function<'ast>, flags: Option<ScopeFlags>) {
-		// if this function is a top-level function, we could add it as a rsc
-		let should_add_func_as_rsc: bool = match func.scope_id.get() {
+		// if this function is a top-level function, we should add it to rsc here
+		let is_top_level_function: bool = match func.scope_id.get() {
 			None => false,
 			Some(scope_id) => {
 				let parent_id = self.semantic.scopes().get_parent_id(scope_id);
@@ -539,7 +652,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 				}
 			}
 		};
-		if should_add_func_as_rsc {
+		if is_top_level_function {
 			let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), func.span.start);
 
 			self.try_add_function_as_rsc(
@@ -549,6 +662,29 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 			);
 		}
 		walk_mut::walk_function_mut(self, func, flags);
+	}
+
+	fn visit_declaration(&mut self, decl: &mut Declaration<'ast>) {
+		match decl {
+			Declaration::FunctionDeclaration(func) => {
+				let is_server_action = self.is_server_action(func);
+				if !self.is_server_layer & is_server_action {
+					// convert to `createServerReference(id, callServerRSC);`
+					match &func.id {
+						Some(id) => {
+							let (_, fn_id) = self.generate_action_id(self.file_name.as_str(), func.span.start);
+							*decl = self.generate_rsc_reference_call(
+								id.name.as_str(),
+								self.get_export_id(fn_id),
+							);
+						}
+						None => {}
+					}
+				}
+			}
+			_ => {}
+		}
+		walk_mut::walk_declaration_mut(self, decl);
 	}
 }
 
@@ -569,6 +705,19 @@ mod tests {
 		assert_eq!(parsed_code, expected_output);
 	}
 
+	fn test_tsx_client_input(
+		input: &str,
+		expected_output: &str,
+	) {
+		let parsed_code = react_server_action_impl(
+			input.to_string(),
+			"__waku__server__",
+			TSX_FILE_PATH.into(),
+			NOT_SERVER_LAYER,
+		);
+		assert_eq!(parsed_code, expected_output);
+	}
+
 	fn test_ts_server_input(
 		input: &str,
 		expected_output: &str,
@@ -585,6 +734,28 @@ mod tests {
 	const NORMAL_FILE_PATH: &str = "./file.ts";
 	const TSX_FILE_PATH: &str = "./file.tsx";
 	const IS_SERVER_LAYER: bool = true;
+	const NOT_SERVER_LAYER: bool = false;
+
+	#[test]
+	fn test_client_import_rsc() {
+		let input = r#"
+export async function a() {
+	"use server";
+	return 0;
+}
+"#;
+		test_tsx_client_input(
+			input, r#"export const a = registerServerReference('__waku__server__fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f', callServerRSC);
+"#,
+		);
+
+		test_tsx_server_input(input, r#"export async function a() {
+	'use server';
+	return 0;
+}
+export const __waku__server__fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f = registerServerReference(a, 'aa08e78087e8703bec46e0df0ebc4c78800fdbaa', 'fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f');
+"#);
+	}
 
 	#[test]
 	fn test_rsc_inside_component() {
@@ -639,6 +810,7 @@ async function test() {
 "#, r#"async function test() {
 	return 0;
 }
+export const __waku__server__356a192b7913b04c54574d18c28d46e6395428ab = registerServerReference(test, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', '356a192b7913b04c54574d18c28d46e6395428ab');
 "#);
 
 		// if it's an anonymous function, it should be converted correctly
