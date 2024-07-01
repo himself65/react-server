@@ -1,5 +1,84 @@
 # React Server
 
+> Collection of React Server tools
+
+## RSC rules
+
+### Valid RSC
+
+```tsx
+'use server'
+'use client'
+// ❌
+```
+
+```tsx
+'use server'
+// ✅
+```
+
+```tsx
+'use client'
+// ✅
+```
+
+```tsx
+'use client'
+export const foo = async () => {
+  'use server'
+  return 'rsc'
+}
+// ❌
+```
+
+```tsx
+export const foo = async () => {
+  'use server'
+  return 'rsc'
+}
+// ✅
+```
+
+### Register RSC
+
+#### Option 1: export `__PREFIX__+name` in the same file
+
+```tsx
+import { registerServerReference } from 'react-server-dom-webpack/server'
+
+export const foo = async () => {
+  'use server'
+  return 'rsc'
+}
+
+export const __prefix__foo = registerServerReference(foo, 'file_id', 'foo')
+```
+
+#### Option 2: register in local map
+
+```tsx
+import { registerServerReference } from 'react-server-dom-webpack/server'
+
+export const rscMap = new Map()
+
+function register (
+  fn: Function,
+  file: string,
+  name: string,
+) {
+  registerServerReference(fn, file, name)
+  rscMap.set(id, fn)
+  return fn
+}
+
+export const foo = async () => {
+  'use server'
+  return 'rsc'
+}
+
+register(foo, 'file_id', 'foo')
+```
+
 ### Transform RSC
 
 #### Case 1: server action file
