@@ -144,7 +144,7 @@ export const __prefix__wrapFn = registerServerReference(wrapFn, 'file_id', 'wrap
 
 Note that all server actions should be exported, otherwise server runtime cannot access them.
 
-#### Case 3: server action in class
+#### Case 3: server action in nested function
 
 ```tsx
 import { Component } from '@/components'
