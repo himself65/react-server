@@ -1,6 +1,6 @@
 {
   "name": "react-server-action-win32-ia32-msvc",
-  "version": "1.0.0",
+  "version": "0.2.1",
   "os": [
     "win32"
   ],
