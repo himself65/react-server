@@ -278,20 +278,38 @@ impl<'ast> ReactServerAction<'ast> {
 		export_id: &'ast str,
 	) {
 		let mut arguments: Vec<ast::Argument> = Vec::new_in(self.allocator);
-		// func_name
-		arguments.push(
-			ast::Argument::Identifier(
-				Box::new_in(
-					ast::IdentifierReference {
-						span: Default::default(),
-						name: Atom::from(fn_name),
-						reference_id: Cell::new(None),
-						reference_flag: Default::default(),
-					},
-					self.allocator,
+
+		if self.validate_result.is_client_entry && self.is_server_layer {
+			// func_name = invalid_rsc_call
+			arguments.push(
+				ast::Argument::Identifier(
+					Box::new_in(
+						ast::IdentifierReference {
+							span: Default::default(),
+							name: Atom::from("invalid_rsc_call"),
+							reference_id: Cell::new(None),
+							reference_flag: Default::default(),
+						},
+						self.allocator,
+					)
 				)
-			)
-		);
+			);
+		} else {
+			// func_name
+			arguments.push(
+				ast::Argument::Identifier(
+					Box::new_in(
+						ast::IdentifierReference {
+							span: Default::default(),
+							name: Atom::from(fn_name),
+							reference_id: Cell::new(None),
+							reference_flag: Default::default(),
+						},
+						self.allocator,
+					)
+				)
+			);
+		}
 		// file_id
 		arguments.push(
 			ast::Argument::StringLiteral(
@@ -498,7 +516,7 @@ impl<'ast> ReactServerAction<'ast> {
 
 	fn is_server_action(
 		&mut self,
-		func: &mut ast::Function<'ast>,
+		func: &ast::Function<'ast>,
 	) -> bool {
 		let mut has_use_server = false;
 		for stmt in &func.body {
@@ -572,23 +590,6 @@ impl<'ast> ReactServerAction<'ast> {
 /// Case 3: client import server -> createServerReference
 /// Case 4: client import client -> as-is
 impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
-	fn visit_export_named_declaration(&mut self, decl: &mut ast::ExportNamedDeclaration<'ast>) {
-		if self.validate_result.is_client_entry && self.is_server_layer {
-			// convert to `registerClientReference(fn, file_id, export_id);`
-			let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), decl.span.start);
-			self.emit_rsc_export("invalid_rsc_call", file_id, fn_id);
-			*decl = ast::ExportNamedDeclaration {
-				span: Default::default(),
-				declaration: None,
-				specifiers: Vec::new_in(self.allocator),
-				source: None,
-				export_kind: ast::ImportOrExportKind::Value,
-				with_clause: None,
-			}
-		}
-		walk_mut::walk_export_named_declaration_mut(self, decl);
-	}
-
 	fn visit_variable_declarator(&mut self, declarator: &mut ast::VariableDeclarator<'ast>) {
 		if let Some(expr) = declarator.init.as_mut() {
 			match expr {
@@ -706,6 +707,108 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 		walk_mut::walk_function_mut(self, func, flags);
 	}
 
+	fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+		match expr {
+			ast::Expression::ObjectExpression(obj) => {
+				for kind in obj.properties.iter_mut() {
+					match kind {
+						ast::ObjectPropertyKind::ObjectProperty(obj) => {
+							match &obj.value {
+								ast::Expression::FunctionExpression(func) => {
+									let is_server_action = self.is_server_action(func);
+									if is_server_action && self.is_server_layer {
+										let export_id = self.emit_anonymous_rsc_export(func);
+										obj.value = ast::Expression::Identifier(
+											Box::new_in(
+												ast::IdentifierReference {
+													span: Default::default(),
+													name: Atom::from(export_id),
+													reference_id: Cell::new(None),
+													reference_flag: Default::default(),
+												},
+												self.allocator,
+											)
+										);
+									}
+								}
+								_ => {}
+							}
+						}
+						_ => {}
+					}
+				}
+			}
+			_ => {}
+		}
+		walk_mut::walk_expression_mut(self, expr);
+	}
+
+	fn visit_export_default_declaration(&mut self, decl: &mut ast::ExportDefaultDeclaration<'ast>) {
+		if self.validate_result.is_client_entry && self.is_server_layer {
+			// todo: unfinished
+			// convert to `registerClientReference(fn, file_id, export_id);`
+			*decl = ast::ExportDefaultDeclaration {
+				span: Default::default(),
+				declaration: ast::ExportDefaultDeclarationKind::FunctionDeclaration(
+					Box::new_in(
+						ast::Function {
+							r#type: ast::FunctionType::FunctionDeclaration,
+							span: Default::default(),
+							id: Some(ast::BindingIdentifier {
+								span: Default::default(),
+								name: "invalid_rsc_call_default".into(),
+								symbol_id: Cell::new(None),
+							}),
+							generator: false,
+							r#async: false,
+							declare: false,
+							this_param: None,
+							params: Box::new_in(
+								ast::FormalParameters {
+									span: Default::default(),
+									kind: ast::FormalParameterKind::FormalParameter,
+									items: Vec::new_in(self.allocator),
+									rest: None,
+								},
+								self.allocator,
+							),
+							type_parameters: None,
+							return_type: None,
+							scope_id: Cell::new(None),
+							body: None,
+						},
+						self.allocator,
+					)
+				),
+				exported: ast::ModuleExportName::IdentifierName(ast::IdentifierName {
+					span: Default::default(),
+					name: "default".into(),
+				}),
+			}
+		}
+	}
+
+	fn visit_export_named_declaration(&mut self, export_decl: &mut ast::ExportNamedDeclaration<'ast>) {
+		if self.validate_result.is_client_entry && self.is_server_layer {
+			// convert to `registerClientReference(fn, file_id, export_id);`
+			let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), export_decl.span.start);
+			if let Some(decl) = &export_decl.declaration {
+				if let Some(id) = decl.id() {
+					self.emit_rsc_export(id.name.as_str(), file_id, fn_id);
+					*export_decl = ast::ExportNamedDeclaration {
+						span: Default::default(),
+						declaration: None,
+						specifiers: Vec::new_in(self.allocator),
+						source: None,
+						export_kind: ast::ImportOrExportKind::Value,
+						with_clause: None,
+					}
+				}
+			}
+		}
+		walk_mut::walk_export_named_declaration_mut(self, export_decl);
+	}
+
 	fn visit_declaration(&mut self, decl: &mut ast::Declaration<'ast>) {
 		match decl {
 			ast::Declaration::FunctionDeclaration(func) => {
@@ -725,8 +828,8 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 				} else if self.is_server_layer && self.validate_result.is_client_entry {
 					// convert to `registerClientReference(fn, file_id, export_id);`
 					match &func.id {
-						Some(id) => {
-							let (_, fn_id) = self.generate_action_id(self.file_name.as_str(), func.span.start);
+						Some(_) => {
+							let (_, _) = self.generate_action_id(self.file_name.as_str(), func.span.start);
 							// self.emit_rsc_export(
 							// 	id.name.as_str(),
 							// 	self.get_export_id(fn_id),
@@ -792,6 +895,28 @@ mod tests {
 	const NOT_SERVER_LAYER: bool = false;
 
 	#[test]
+	fn test_vercel_ai_rsc() {
+		let input = r#"
+const AI = createAI({
+	actions: {
+		foo: async function() {
+			"use server";
+			return 0;
+		}
+	}
+});
+export { AI };
+"#;
+		test_ts_server_input(input, r#"const AI = createAI({actions: {foo: __waku__server__92cfceb39d57d914ed8b14d0e37643de0797ae56}});
+export { AI };
+export const __waku__server__92cfceb39d57d914ed8b14d0e37643de0797ae56 = registerServerReference(async function() {
+	'use server';
+	return 0;
+}, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', '92cfceb39d57d914ed8b14d0e37643de0797ae56');
+"#)
+	}
+
+	#[test]
 	fn test_client_import_rsc() {
 		let input = r#"
 export async function a() {
@@ -810,6 +935,12 @@ export async function a() {
 }
 export const __waku__server__fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f = registerServerReference(a, 'aa08e78087e8703bec46e0df0ebc4c78800fdbaa', 'fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f');
 "#);
+
+		// 		test_tsx_server_input(r#"
+		// "use client"
+		// export default async function () {
+		// 	return 0;
+		// }"#, r#""#);
 	}
 
 	#[test]
@@ -819,7 +950,7 @@ export const __waku__server__fe5dbbcea5ce7e2988b8c69bcfdfde8904aabc1f = register
 export async function foo() {}"#,
 		                     r#"'use client';
 export {};
-export const invalid_rsc_call = registerClientReference(invalid_rsc_call, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', 'fa35e192121eabf3dabf9f5ea6abdbcbc107ac3b');
+export const foo = registerClientReference(invalid_rsc_call, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', 'fa35e192121eabf3dabf9f5ea6abdbcbc107ac3b');
 "#);
 	}
 
