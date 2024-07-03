@@ -11,7 +11,7 @@ use tokio::fs;
 
 #[napi(object)]
 pub struct ValidateResult {
-	pub is_client_entry: bool,
+	pub is_client_entry: bool, // if there is "use client" directive on top of the file
 	pub is_server_action: bool,
 	pub error: Option<RSCError>,
 	pub imports: Vec<ModuleImports>,
@@ -41,15 +41,15 @@ pub async fn validate(
 			.map_err(|e| Error::new(Status::Unknown, format!("Failed to read file: {}", e)))?
 	).unwrap();
 	let source_type = SourceType::from_path(path).unwrap();
-	validate_string(source_text, source_type)
+	validate_string(&source_text, source_type)
 }
 
-fn validate_string(
-	source_text: String,
+pub fn validate_string(
+	source_text: &String,
 	source_type: SourceType,
 ) -> napi::Result<ValidateResult> {
 	let allocator = Allocator::default();
-	let ret = Parser::new(&allocator, &source_text, source_type).parse();
+	let ret = Parser::new(&allocator, source_text, source_type).parse();
 
 	let size = ret.errors.len();
 	for error in ret.errors {
@@ -164,7 +164,7 @@ mod tests {
 		let source_text = r#"
 		"use server"
 	"#;
-		let rsc = validate_string(source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
 	}
@@ -174,7 +174,7 @@ mod tests {
 		let source_text = r#"
 		"use client"
 	"#;
-		let rsc = validate_string(source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
 	}
@@ -185,7 +185,7 @@ mod tests {
 		"use server"
 		"use client"
 	"#;
-		let rsc = validate_string(source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, Some(RSCError::CannotUseBothClientAndServer));
 	}
@@ -199,7 +199,7 @@ mod tests {
 			"use server"
 		}
 	"#;
-		let rsc = validate_string(source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
 		assert_eq!(rsc.is_server_action, true);
 		assert_eq!(rsc.error, None);
 	}
@@ -218,7 +218,7 @@ mod tests {
 			return 1
 		}
 	"#;
-		let rsc = validate_string(source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
 		// cannot tell if 'foo' is a server action, depends on if there's a Server component that uses it
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
