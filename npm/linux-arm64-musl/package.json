@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-linux-arm64-musl",
+  "name": "react-server-action-linux-arm64-musl",
   "version": "1.0.0",
   "os": [
     "linux"
@@ -10,9 +10,9 @@
   "libc": [
     "musl"
   ],
-  "main": "rsc-rs.linux-arm64-musl.node",
+  "main": "react-server-action.linux-arm64-musl.node",
   "files": [
-    "rsc-rs.linux-arm64-musl.node"
+    "react-server-action.linux-arm64-musl.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [

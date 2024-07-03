@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-darwin-x64",
+  "name": "react-server-action-darwin-x64",
   "version": "1.0.0",
   "os": [
     "darwin"
@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "rsc-rs.darwin-x64.node",
+  "main": "react-server-action.darwin-x64.node",
   "files": [
-    "rsc-rs.darwin-x64.node"
+    "react-server-action.darwin-x64.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
