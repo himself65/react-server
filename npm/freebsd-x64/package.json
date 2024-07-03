@@ -28,5 +28,8 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:himself65/react-server.git"
+  "repository": {
+    "directory": "npm/freebsd-x64",
+    "url": "https://github.com/himself65/react-server"
+  }
 }

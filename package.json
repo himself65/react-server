@@ -77,5 +77,8 @@
     "universal": "napi universal",
     "version": "napi version"
   },
-  "packageManager": "pnpm@9.4.0"
+  "packageManager": "pnpm@9.4.0",
+  "repository": {
+    "url": "https://github.com/himself65/react-server"
+  }
 }
