@@ -1028,13 +1028,13 @@ export const __waku__server__17ba0791499db908433b80f37c5fbc89b870084b = register
 		test_ts_server_input(
 			r#"
 const a = {
-	b: function() {
+	b: async function() {
 		"use server"
 		return 0;
 	}
 }
 "#, r#"const a = {b: __waku__server__0716d9708d321ffb6a00818614779e779925365c};
-export const __waku__server__0716d9708d321ffb6a00818614779e779925365c = registerServerReference(function() {
+export const __waku__server__0716d9708d321ffb6a00818614779e779925365c = registerServerReference(async function() {
 	'use server';
 	return 0;
 }, '9a024afde04fb48946fa537e9d0b5e8a4bfde606', '0716d9708d321ffb6a00818614779e779925365c');
