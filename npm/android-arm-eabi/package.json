@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-android-arm-eabi",
+  "name": "react-server-action-android-arm-eabi",
   "version": "1.0.0",
   "os": [
     "android"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "rsc-rs.android-arm-eabi.node",
+  "main": "react-server-action.android-arm-eabi.node",
   "files": [
-    "rsc-rs.android-arm-eabi.node"
+    "react-server-action.android-arm-eabi.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [

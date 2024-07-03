@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-freebsd-x64",
+  "name": "react-server-action-freebsd-x64",
   "version": "1.0.0",
   "os": [
     "freebsd"
@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "rsc-rs.freebsd-x64.node",
+  "main": "react-server-action.freebsd-x64.node",
   "files": [
-    "rsc-rs.freebsd-x64.node"
+    "react-server-action.freebsd-x64.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [

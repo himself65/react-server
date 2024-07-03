@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-win32-ia32-msvc",
+  "name": "react-server-action-win32-ia32-msvc",
   "version": "1.0.0",
   "os": [
     "win32"
@@ -7,9 +7,9 @@
   "cpu": [
     "ia32"
   ],
-  "main": "rsc-rs.win32-ia32-msvc.node",
+  "main": "react-server-action.win32-ia32-msvc.node",
   "files": [
-    "rsc-rs.win32-ia32-msvc.node"
+    "react-server-action.win32-ia32-msvc.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [

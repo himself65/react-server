@@ -1,10 +1,10 @@
 {
-  "name": "rsc-rs",
+  "name": "react-server-action",
   "version": "0.2.0",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "rsc-rs",
+    "name": "react-server-action",
     "triples": {
       "defaults": true,
       "additional": [

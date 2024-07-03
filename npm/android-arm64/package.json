@@ -1,5 +1,5 @@
 {
-  "name": "rsc-rs-android-arm64",
+  "name": "react-server-action-android-arm64",
   "version": "1.0.0",
   "os": [
     "android"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm64"
   ],
-  "main": "rsc-rs.android-arm64.node",
+  "main": "react-server-action.android-arm64.node",
   "files": [
-    "rsc-rs.android-arm64.node"
+    "react-server-action.android-arm64.node"
   ],
   "description": "Template project for writing node package with napi-rs",
   "keywords": [
