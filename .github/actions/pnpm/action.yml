@@ -9,7 +9,7 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version-file: .node-version
+        node-version-file: .nvmrc
         cache: pnpm
 
     - run: pnpm install
