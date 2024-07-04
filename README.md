@@ -1,5 +1,24 @@
 # React Server
 
+## Usage
+
+```shell
+npm add react-server-action
+yarn add react-server-action
+pnpm add react-server-action
+```åå
+
+```tsx
+import { validate, reactServerAction } from 'react-server-action'
+
+const isServerLayer = true
+const result = validate('path/to/file', isServerLayer)
+if (!result.error) {
+  const code = await reactServerAction('path/to/file', '__prefix__', isServerLayer)
+  console.log(code)
+}
+```
+
 > Collection of React Server tools
 
 ## RSC rules
