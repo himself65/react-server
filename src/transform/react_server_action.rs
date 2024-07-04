@@ -38,7 +38,7 @@ fn react_server_action_impl(
 ) -> String {
 	let path = Path::new(&file_path);
 	let source_type = SourceType::from_path(path).unwrap();
-	let valid_ret = validate_string(&source_text, source_type).unwrap();
+	let valid_ret = validate_string(&source_text, source_type, is_server_layer).unwrap();
 
 	let allocator = Allocator::default();
 	let ret = Parser::new(&allocator, &source_text, source_type).parse();

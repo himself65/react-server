@@ -1,7 +1,7 @@
 use std::path::Path;
 use napi::{Error, Status};
 use oxc_allocator::Allocator;
-use oxc_ast::ast::{Function, ImportDeclaration, Program};
+use oxc_ast::ast::{ArrowFunctionExpression, ExportNamedDeclaration, Expression, Function, FunctionBody, ImportDeclaration, Program};
 use oxc_ast::{Visit};
 use oxc_ast::visit::walk;
 use oxc_parser::Parser;
@@ -30,9 +30,16 @@ pub struct ModuleImports {
 	pub name: String,
 }
 
+///
+/// Validate a file is a valid Server file or Client File
+///
+/// @param file_path: string - the path to the file
+///
+/// @param is_server_layer: boolean - if the file is in the server layer, enable this in server side rendering
 #[napi]
 pub async fn validate(
 	file_path: String,
+	is_server_layer: bool,
 ) -> napi::Result<ValidateResult> {
 	let path = Path::new(&file_path);
 	let source_text = String::from_utf8(
@@ -41,12 +48,13 @@ pub async fn validate(
 			.map_err(|e| Error::new(Status::Unknown, format!("Failed to read file: {}", e)))?
 	).unwrap();
 	let source_type = SourceType::from_path(path).unwrap();
-	validate_string(&source_text, source_type)
+	validate_string(&source_text, source_type, is_server_layer)
 }
 
 pub fn validate_string(
 	source_text: &String,
 	source_type: SourceType,
+	is_server_layer: bool,
 ) -> napi::Result<ValidateResult> {
 	let allocator = Allocator::default();
 	let ret = Parser::new(&allocator, source_text, source_type).parse();
@@ -63,7 +71,18 @@ pub fn validate_string(
 
 	let program = ret.program;
 
-	let mut rsc = ReactServerComponent::default();
+	let mut rsc = ReactServerComponent {
+		is_server_layer,
+
+		is_server_action: false,
+		is_client_entry: false,
+		error: None,
+		has_use_client: false,
+		has_use_server: false,
+		imports: vec![],
+		has_async_function: false,
+	};
+
 	rsc.visit_program(&program);
 
 	let result = ValidateResult {
@@ -78,29 +97,34 @@ pub fn validate_string(
 
 #[derive(Debug)]
 pub struct ReactServerComponent {
+	pub is_server_layer: bool,
+
+	// could this file be treated as server action files
 	pub is_server_action: bool,
+	// is this file a client entry file
+	pub is_client_entry: bool,
+
 	pub error: Option<RSCError>,
 	pub imports: Vec<ModuleImports>,
 
 	// has "use client" directive on top of the file
-	has_use_client: bool,
+	pub has_use_client: bool,
 	// has "use server" directive on top of the file
-	has_use_server: bool,
+	pub has_use_server: bool,
+	pub has_async_function: bool,
 }
 
-impl<'a> Default for ReactServerComponent {
-	fn default() -> Self {
-		ReactServerComponent {
-			is_server_action: false,
-			error: None,
-
-			has_use_client: false,
-			has_use_server: false,
-
-			imports: vec![],
+impl ReactServerComponent {
+	fn has_server_directive(&self, function_body: &FunctionBody) -> bool {
+		for d in &function_body.directives {
+			if &d.expression.value == "use server" {
+				return true;
+			}
 		}
+		false
 	}
 }
+
 
 impl<'a> Visit<'a> for ReactServerComponent {
 	fn visit_program(&mut self, program: &Program<'a>) {
@@ -118,18 +142,23 @@ impl<'a> Visit<'a> for ReactServerComponent {
 			if self.has_use_server && self.has_use_client {
 				self.error = Some(RSCError::CannotUseBothClientAndServer);
 			}
+			// final check if this file is a server action file
+			if !self.has_use_client {
+				if !self.is_server_action {
+					if self.has_use_server && self.has_async_function {
+						self.is_server_action = true;
+					} else if !self.has_use_server & !self.has_use_server {
+						self.is_server_action = self.has_async_function && self.is_server_layer;
+					}
+				}
+			}
 		}
 	}
 
 	fn visit_function(&mut self, func: &Function<'a>, flags: Option<ScopeFlags>) {
 		let mut is_server_action = false;
-		for stmt in &func.body {
-			stmt.directives.iter().for_each(|d| {
-				if &d.expression.value == "use server" {
-					self.is_server_action = true;
-					is_server_action = true;
-				}
-			});
+		if let Some(body) = &func.body {
+			is_server_action = self.has_server_directive(body);
 		}
 		// check if server action is valid
 		if !func.r#async && is_server_action {
@@ -137,7 +166,23 @@ impl<'a> Visit<'a> for ReactServerComponent {
 			return;
 		}
 
+		self.has_async_function |= func.r#async;
+
 		walk::walk_function(self, func, flags);
+	}
+
+	fn visit_arrow_expression(&mut self, func: &ArrowFunctionExpression<'a>) {
+		let is_server_action = self.has_server_directive(&func.body);
+
+		// check if server action is valid
+		if !func.r#async && is_server_action {
+			self.error = Some(RSCError::ServerActionMustBeAsync);
+			return;
+		}
+
+		self.has_async_function |= func.r#async;
+
+		walk::walk_arrow_expression(self, func);
 	}
 
 	fn visit_import_declaration(&mut self, decl: &ImportDeclaration<'a>) {
@@ -164,7 +209,7 @@ mod tests {
 		let source_text = r#"
 		"use server"
 	"#;
-		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
 	}
@@ -174,7 +219,7 @@ mod tests {
 		let source_text = r#"
 		"use client"
 	"#;
-		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
 	}
@@ -185,7 +230,7 @@ mod tests {
 		"use server"
 		"use client"
 	"#;
-		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, Some(RSCError::CannotUseBothClientAndServer));
 	}
@@ -195,12 +240,10 @@ mod tests {
 		let source_text = r#"
 		"use client"
 
-		async function foo() {
-			"use server"
-		}
+		async function foo() {}
 	"#;
-		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
-		assert_eq!(rsc.is_server_action, true);
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
+		assert_eq!(rsc.is_server_action, false);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -218,9 +261,47 @@ mod tests {
 			return 1
 		}
 	"#;
-		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap()).unwrap();
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		// cannot tell if 'foo' is a server action, depends on if there's a Server component that uses it
+		assert_eq!(rsc.is_server_action, true);
+		assert_eq!(rsc.error, None);
+	}
+
+	#[test]
+	fn test_arrow_function() {
+		let source_text = r#"
+		"use server"
+
+		const foo = async () => {
+			"use server"
+		}
+	"#;
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
+		assert_eq!(rsc.is_server_action, true);
+		assert_eq!(rsc.error, None);
+	}
+
+	#[test]
+	fn client_side_isomorphic() {
+		let source_text = r#"
+		export async function foo() {
+			// unknown if this is a server action
+		}
+	"#;
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), false).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.error, None);
+	}
+
+	#[test]
+	fn server_side_isomorphic() {
+		let source_text = r#"
+		export async function foo() {
+			// unknown if this is a server action
+		}
+	"#;
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
+		assert_eq!(rsc.is_server_action, true);
 		assert_eq!(rsc.error, None);
 	}
 }
