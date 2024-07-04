@@ -1,7 +1,7 @@
 use std::path::Path;
 use napi::{Error, Status};
 use oxc_allocator::Allocator;
-use oxc_ast::ast::{ArrowFunctionExpression, ExportNamedDeclaration, Expression, Function, FunctionBody, ImportDeclaration, Program};
+use oxc_ast::ast;
 use oxc_ast::{Visit};
 use oxc_ast::visit::walk;
 use oxc_parser::Parser;
@@ -115,7 +115,7 @@ pub struct ReactServerComponent {
 }
 
 impl ReactServerComponent {
-	fn has_server_directive(&self, function_body: &FunctionBody) -> bool {
+	fn has_server_directive(&self, function_body: &ast::FunctionBody) -> bool {
 		for d in &function_body.directives {
 			if &d.expression.value == "use server" {
 				return true;
@@ -127,7 +127,7 @@ impl ReactServerComponent {
 
 
 impl<'a> Visit<'a> for ReactServerComponent {
-	fn visit_program(&mut self, program: &Program<'a>) {
+	fn visit_program(&mut self, program: &ast::Program<'a>) {
 		program.directives.iter().for_each(|d| {
 			if &d.expression.value == "use server" {
 				self.has_use_server = true;
@@ -155,7 +155,7 @@ impl<'a> Visit<'a> for ReactServerComponent {
 		}
 	}
 
-	fn visit_function(&mut self, func: &Function<'a>, flags: Option<ScopeFlags>) {
+	fn visit_function(&mut self, func: &ast::Function<'a>, flags: Option<ScopeFlags>) {
 		let mut is_server_action = false;
 		if let Some(body) = &func.body {
 			is_server_action = self.has_server_directive(body);
@@ -171,7 +171,7 @@ impl<'a> Visit<'a> for ReactServerComponent {
 		walk::walk_function(self, func, flags);
 	}
 
-	fn visit_arrow_expression(&mut self, func: &ArrowFunctionExpression<'a>) {
+	fn visit_arrow_expression(&mut self, func: &ast::ArrowFunctionExpression<'a>) {
 		let is_server_action = self.has_server_directive(&func.body);
 
 		// check if server action is valid
@@ -185,7 +185,7 @@ impl<'a> Visit<'a> for ReactServerComponent {
 		walk::walk_arrow_expression(self, func);
 	}
 
-	fn visit_import_declaration(&mut self, decl: &ImportDeclaration<'a>) {
+	fn visit_import_declaration(&mut self, decl: &ast::ImportDeclaration<'a>) {
 		if decl.source.value == "client-only" {
 			self.has_use_client = true;
 		} else if decl.source.value == "server-only" {
