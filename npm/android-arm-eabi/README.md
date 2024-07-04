@@ -1,3 +1,0 @@
-# `react-server-action-android-arm-eabi`
-
-This is the **armv7-linux-androideabi** binary for `react-server-action`
