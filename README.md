@@ -6,7 +6,7 @@
 npm add react-server-action
 yarn add react-server-action
 pnpm add react-server-action
-```åå
+```
 
 ```tsx
 import { validate, reactServerAction } from 'react-server-action'
