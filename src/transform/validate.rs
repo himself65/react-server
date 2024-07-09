@@ -10,7 +10,7 @@ use oxc_syntax::scope::ScopeFlags;
 
 #[napi(object)]
 pub struct ValidateResult {
-	pub is_client_entry: bool, // if there is "use client" directive on top of the file
+	pub file_type: FileType,
 	pub is_server_action: bool,
 	pub error: Option<RSCError>,
 	pub imports: Vec<ModuleImports>,
@@ -27,6 +27,12 @@ pub enum RSCError {
 #[derive(Debug)]
 pub struct ModuleImports {
 	pub name: String,
+}
+
+impl ValidateResult {
+	pub(crate) fn is_client(&self) -> bool {
+		self.file_type == FileType::Client
+	}
 }
 
 ///
@@ -82,14 +88,39 @@ pub fn validate_string(
 
 	rsc.visit_program(&program);
 
+	if rsc.error.is_none() {
+		if rsc.has_use_server {
+			assert_eq!(rsc.has_use_client, false);
+		} else if rsc.has_use_client {
+			assert_eq!(rsc.has_use_server, false);
+		} else {
+			assert_eq!(rsc.has_use_server, false);
+			assert_eq!(rsc.has_use_client, false);
+		}
+	}
+
 	let result = ValidateResult {
-		is_client_entry: rsc.has_use_client && !rsc.has_use_server,
+		file_type: if rsc.has_use_client {
+			FileType::Client
+		} else if rsc.has_use_server {
+			FileType::Server
+		} else {
+			FileType::Isomorphic
+		},
 		is_server_action: rsc.is_server_action,
 		error: rsc.error,
 		imports: rsc.imports,
 	};
 
 	Ok(result)
+}
+
+#[derive(Debug, PartialEq)]
+#[napi(string_enum)]
+pub enum FileType {
+	Client,
+	Server,
+	Isomorphic,
 }
 
 #[derive(Debug)]
@@ -144,7 +175,7 @@ impl<'a> Visit<'a> for ReactServerComponent {
 				if !self.is_server_action {
 					if self.has_use_server && self.has_async_function {
 						self.is_server_action = true;
-					} else if !self.has_use_server & !self.has_use_server {
+					} else if !self.has_use_server & !self.has_use_client {
 						self.is_server_action = self.has_async_function && self.is_server_layer;
 					}
 				}
@@ -208,7 +239,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
-		assert_eq!(rsc.is_client_entry, false);
+		assert_eq!(rsc.file_type, FileType::Server);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -219,7 +250,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
-		assert_eq!(rsc.is_client_entry, true);
+		assert_eq!(rsc.file_type, FileType::Client);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -230,8 +261,6 @@ mod tests {
 		"use client"
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
-		assert_eq!(rsc.is_server_action, false);
-		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, Some(RSCError::CannotUseBothClientAndServer));
 	}
 
@@ -244,7 +273,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
-		assert_eq!(rsc.is_client_entry, true);
+		assert_eq!(rsc.file_type, FileType::Client);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -265,7 +294,7 @@ mod tests {
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		// cannot tell if 'foo' is a server action, depends on if there's a Server component that uses it
 		assert_eq!(rsc.is_server_action, true);
-		assert_eq!(rsc.is_client_entry, false);
+		assert_eq!(rsc.file_type, FileType::Server);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -280,7 +309,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, true);
-		assert_eq!(rsc.is_client_entry, false);
+		assert_eq!(rsc.file_type, FileType::Server);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -293,7 +322,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), false).unwrap();
 		assert_eq!(rsc.is_server_action, false);
-		assert_eq!(rsc.is_client_entry, false);
+		assert_eq!(rsc.file_type, FileType::Isomorphic);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -306,7 +335,18 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, true);
-		assert_eq!(rsc.is_client_entry, false);
+		assert_eq!(rsc.file_type, FileType::Isomorphic);
+		assert_eq!(rsc.error, None);
+	}
+
+	#[test]
+	fn server_side_nothing() {
+		let source_text = r#"
+		// do nothing
+	"#;
+		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.ts").unwrap(), true).unwrap();
+		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.file_type, FileType::Isomorphic);
 		assert_eq!(rsc.error, None);
 	}
 }

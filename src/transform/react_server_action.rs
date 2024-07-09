@@ -279,7 +279,7 @@ impl<'ast> ReactServerAction<'ast> {
 	) {
 		let mut arguments: Vec<ast::Argument> = Vec::new_in(self.allocator);
 
-		if self.validate_result.is_client_entry && self.is_server_layer {
+		if self.validate_result.is_client() && self.is_server_layer {
 			// func_name = invalid_rsc_call
 			arguments.push(
 				ast::Argument::Identifier(
@@ -336,7 +336,7 @@ impl<'ast> ReactServerAction<'ast> {
 		);
 
 		let mut var = Vec::new_in(self.allocator);
-		let export_id: &str = match self.validate_result.is_client_entry {
+		let export_id: &str = match self.validate_result.is_client() {
 			true => fn_name,
 			false => self.get_export_id(export_id)
 		};
@@ -362,7 +362,7 @@ impl<'ast> ReactServerAction<'ast> {
 				},
 				init: Some(
 					self.generate_register_call(
-						match self.validate_result.is_client_entry {
+						match self.validate_result.is_client() {
 							true => "registerClientReference",
 							false => "registerServerReference",
 						},
@@ -549,7 +549,7 @@ impl<'ast> ReactServerAction<'ast> {
 		};
 		let is_server_action = self.is_server_action(func);
 		if self.is_server_layer {
-			if self.validate_result.is_client_entry {
+			if self.validate_result.is_client() {
 				// do nothing here
 			} else if is_server_action {
 				// convert to `registerServerReference(fn, file_id, export_id);`
@@ -744,7 +744,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 	}
 
 	fn visit_export_default_declaration(&mut self, decl: &mut ast::ExportDefaultDeclaration<'ast>) {
-		if self.validate_result.is_client_entry && self.is_server_layer {
+		if self.validate_result.is_client() && self.is_server_layer {
 			// todo: unfinished
 			// convert to `registerClientReference(fn, file_id, export_id);`
 			*decl = ast::ExportDefaultDeclaration {
@@ -789,7 +789,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 	}
 
 	fn visit_export_named_declaration(&mut self, export_decl: &mut ast::ExportNamedDeclaration<'ast>) {
-		if self.validate_result.is_client_entry && self.is_server_layer {
+		if self.validate_result.is_client() && self.is_server_layer {
 			// convert to `registerClientReference(fn, file_id, export_id);`
 			let (file_id, fn_id) = self.generate_action_id(self.file_name.as_str(), export_decl.span.start);
 			if let Some(decl) = &export_decl.declaration {
@@ -825,7 +825,7 @@ impl<'ast> VisitMut<'ast> for ReactServerAction<'ast> {
 						}
 						None => {}
 					}
-				} else if self.is_server_layer && self.validate_result.is_client_entry {
+				} else if self.is_server_layer && self.validate_result.is_client() {
 					// convert to `registerClientReference(fn, file_id, export_id);`
 					match &func.id {
 						Some(_) => {
