@@ -300,11 +300,11 @@ jobs:
           if git log -1 --pretty=%B | grep "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$";
           then
             pnpm napi pre-publish -t npm
-            pnpm publish --access public
+            pnpm publish --access public --no-git-check
           elif git log -1 --pretty=%B | grep "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+";
           then
             pnpm napi pre-publish -t npm
-            pnpm publish --tag next --access public
+            pnpm publish --tag next --access public --no-git-check
           else
             echo "Not a release, skipping publish"
           fi
