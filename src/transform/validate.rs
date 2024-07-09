@@ -211,6 +211,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -221,6 +222,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.is_client_entry, true);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -232,6 +234,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, Some(RSCError::CannotUseBothClientAndServer));
 	}
 
@@ -244,6 +247,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.is_client_entry, true);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -264,6 +268,7 @@ mod tests {
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		// cannot tell if 'foo' is a server action, depends on if there's a Server component that uses it
 		assert_eq!(rsc.is_server_action, true);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -278,6 +283,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, true);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -290,6 +296,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), false).unwrap();
 		assert_eq!(rsc.is_server_action, false);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, None);
 	}
 
@@ -302,6 +309,7 @@ mod tests {
 	"#;
 		let rsc = validate_string(&source_text.to_string(), SourceType::from_path("test.js").unwrap(), true).unwrap();
 		assert_eq!(rsc.is_server_action, true);
+		assert_eq!(rsc.is_client_entry, false);
 		assert_eq!(rsc.error, None);
 	}
 }
