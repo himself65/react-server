@@ -3,6 +3,13 @@
   "version": "0.2.8",
   "main": "index.js",
   "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "esm.mjs",
+    "register.mjs",
+    "browser.js"
+  ],
   "napi": {
     "binaryName": "react-server-action",
     "packageName": "react-server-action",
