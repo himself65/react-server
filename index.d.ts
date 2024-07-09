@@ -21,11 +21,13 @@ export const enum RSCError {
  *
  * Validate a file is a valid Server file or Client File
  *
+ * @param code: string - the code to validate
+ *
  * @param file_path: string - the path to the file
  *
  * @param is_server_layer: boolean - if the file is in the server layer, enable this in server side rendering
  */
-export function validate(filePath: string, isServerLayer: boolean): Promise<ValidateResult>
+export function validate(code: string, filePath: string, isServerLayer: boolean): ValidateResult
 
 export interface ValidateResult {
   isClientEntry: boolean

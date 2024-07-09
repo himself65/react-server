@@ -7,7 +7,6 @@ use oxc_ast::visit::walk;
 use oxc_parser::Parser;
 use oxc_span::SourceType;
 use oxc_syntax::scope::ScopeFlags;
-use tokio::fs;
 
 #[napi(object)]
 pub struct ValidateResult {
@@ -33,22 +32,20 @@ pub struct ModuleImports {
 ///
 /// Validate a file is a valid Server file or Client File
 ///
+/// @param code: string - the code to validate
+///
 /// @param file_path: string - the path to the file
 ///
 /// @param is_server_layer: boolean - if the file is in the server layer, enable this in server side rendering
 #[napi]
-pub async fn validate(
+pub fn validate(
+	code: String,
 	file_path: String,
 	is_server_layer: bool,
 ) -> napi::Result<ValidateResult> {
 	let path = Path::new(&file_path);
-	let source_text = String::from_utf8(
-		fs::read(path)
-			.await
-			.map_err(|e| Error::new(Status::Unknown, format!("Failed to read file: {}", e)))?
-	).unwrap();
 	let source_type = SourceType::from_path(path).unwrap();
-	validate_string(&source_text, source_type, is_server_layer)
+	validate_string(&code, source_type, is_server_layer)
 }
 
 pub fn validate_string(
