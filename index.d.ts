@@ -6,6 +6,12 @@ export interface Comment {
   text: string
 }
 
+export const enum FileType {
+  Client = 'Client',
+  Server = 'Server',
+  Isomorphic = 'Isomorphic'
+}
+
 export interface ModuleImports {
   name: string
 }
@@ -30,7 +36,7 @@ export const enum RSCError {
 export function validate(code: string, filePath: string, isServerLayer: boolean): ValidateResult
 
 export interface ValidateResult {
-  isClientEntry: boolean
+  fileType: FileType
   isServerAction: boolean
   error?: RSCError
   imports: Array<ModuleImports>

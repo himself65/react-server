@@ -361,6 +361,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+module.exports.FileType = nativeBinding.FileType
 module.exports.reactServerAction = nativeBinding.reactServerAction
 module.exports.RSCError = nativeBinding.RSCError
 module.exports.validate = nativeBinding.validate
